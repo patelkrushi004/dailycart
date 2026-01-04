@@ -5,9 +5,12 @@
   "main": "server.js",
   "type": "module",
   "scripts": {
+     "dev": "vite",
     "start": "node server.js",
     "server": "nodemon server.js"
   },
+ 
+
   "keywords": [],
   "author": "",
   "license": "ISC",
