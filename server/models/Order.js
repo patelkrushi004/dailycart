@@ -1,41 +1,48 @@
 import mongoose from "mongoose";
 
 const orderSchema = new mongoose.Schema({
-  userId: { type: String, required: true, ref: 'user' },
-
+  userId: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    required: true, 
+    ref: 'user' 
+  },
+  sellerId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'seller', 
+    required: true 
+  },
   items: [{
-    product: { type: String, required: true, ref: 'product' },
+    product: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'product' },
     quantity: { type: Number, required: true }
   }],
-
   amount: { type: Number, required: true },
-  address: { type: String, required: true, ref: 'address' },
-
-  // existing
-  status: { type: String, default: 'Order Placed' },
-
-  // 👇 STEP 1 CODE (PASTE HERE)
+  address: { type: Object, required: true }, 
+  status: { 
+    type: String, 
+    default: 'Order Placed',
+    enum: ['Order Placed', 'Preparing', 'Ready for Pickup', 'Out for Delivery', 'Delivered', 'Cancelled']
+  },
   deliveryBoy: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'delivery'
+    ref: 'delivery', 
+    default: null
   },
-
   deliveryStatus: {
     type: String,
-    enum: ['pending', 'accepted', 'picked', 'delivered'],
+    enum: ['pending', 'accepted', 'picked', 'delivered', 'cancelled'],
     default: 'pending'
   },
-
-  paymentStatus: {
-    type: String,
-    enum: ['pending', 'paid'],
-    default: 'pending'
-  },
-
-  paymentType: { type: String, required: true },
+  otp: { type: Number, default: null },
+  pickedAt: { type: Date },
+  deliveredAt: { type: Date },
+  paymentType: { type: String, required: true }, 
   isPaid: { type: Boolean, required: true, default: false },
 
-}, { timestamps: true });
+}, { 
+  timestamps: true, // This creates 'createdAt' and 'updatedAt'
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true }
+});
 
 const Order = mongoose.models.order || mongoose.model('order', orderSchema);
 

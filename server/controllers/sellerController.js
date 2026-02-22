@@ -7,7 +7,19 @@ export const sellerLogin = async (req, res) =>{
         const { email, password } = req.body;
 
         if(password === process.env.SELLER_PASSWORD && email === process.env.SELLER_EMAIL){
-            const token = jwt.sign({email}, process.env.JWT_SECRET, {expiresIn: '7d'});
+            
+            // FIX: Using a valid 24-character hex ID so MongoDB doesn't reject it
+            const adminId = "65f1a2b3c4d5e6f7a8b9c0d1"; 
+
+            const token = jwt.sign(
+                { 
+                    email: email, 
+                    id: adminId,     // This satisfies the "ObjectId" requirement
+                    _id: adminId 
+                }, 
+                process.env.JWT_SECRET, 
+                { expiresIn: '7d' }
+            );
 
             res.cookie('sellerToken', token, {
                 httpOnly: true, 

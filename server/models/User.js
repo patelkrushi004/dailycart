@@ -5,15 +5,25 @@ const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
 
-  // ✅ PASTE STEP 1 CODE HERE
   role: {
     type: String,
     enum: ['customer', 'seller', 'delivery'],
     default: 'customer'
   },
 
+  // --- DELIVERY SPECIFIC FIELDS ---
+  // These stay empty for customers but get filled for delivery partners
+  isFirstLogin: { type: Boolean, default: true },
+  phone: { type: String, default: "" },
+  vehicleType: { 
+    type: String, 
+    enum: ['bike', 'scooter', 'car', 'none'], 
+    default: 'none' 
+  },
+  
+  // --- CUSTOMER SPECIFIC FIELDS ---
   cartItems: { type: Object, default: {} },
-}, { minimize: false });
+}, { minimize: false, timestamps: true }); // added timestamps to track when users join
 
 const User = mongoose.models.user || mongoose.model('user', userSchema);
 
