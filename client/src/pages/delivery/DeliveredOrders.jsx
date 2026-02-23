@@ -1,95 +1,93 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import { toast } from 'react-hot-toast';
+import React, { useEffect, useState } from 'react'
+import { useAppContext } from '../../context/AppContext'
+import { assets } from '../../assets/assets'
+import toast from 'react-hot-toast'
 
-const DeliveryOrders = ({ orders }) => {
-  const navigate = useNavigate();
+const DeliveredOrders = () => { // Renamed to match your Sidebar/App.js intent
+    const { currency, axios } = useAppContext()
+    const [orders, setOrders] = useState([])
 
-  const handleAcceptOrder = async (orderId) => {
-    try {
-      // 1. Get data from LocalStorage
-      const token = localStorage.getItem('deliveryToken'); 
-      const storedUser = localStorage.getItem('deliveryUser');
+    const fetchDeliveryOrders = async () => {
+        try {
+            // Logic Fix: Get token for authentication
+            const token = localStorage.getItem('deliveryToken');
+            const deliveryUser = JSON.parse(localStorage.getItem('deliveryUser'));
+            const deliveryBoyId = deliveryUser?._id || deliveryUser?.id;
 
-      // 2. Silent Check (No Alert)
-      if (!token || !storedUser) {
-        console.error("Auth missing");
-        return;
-      }
+            const { data } = await axios.get('/api/delivery/available', { 
+                params: { deliveryBoyId },
+                headers: { token } 
+            });
+            
+            if (data.success) {
+                // Logic Fix: Only show orders that are actually 'Delivered' for the History page
+                const history = data.orders.filter(o => 
+                    o.deliveryBoy === deliveryBoyId && o.status === 'Delivered'
+                );
+                setOrders(history.reverse());
+            } else {
+                toast.error(data.message)
+            }
+        } catch (error) {
+            console.error("Fetch Delivery Orders Error:", error)
+            toast.error(error.message)
+        }
+    };
 
-      // 3. Parse and find the ID
-      const user = JSON.parse(storedUser);
-      // We check for _id (Standard) or id (Just in case)
-      const deliveryBoyId = user._id || user.id;
+    useEffect(() => {
+        fetchDeliveryOrders();
+    }, [])
 
-      if (!deliveryBoyId) {
-        console.error("No Partner ID found in storage");
-        return;
-      }
+    return (
+        /* UI and CSS remain exactly as you provided */
+        <div className='no-scrollbar flex-1 h-[95vh] overflow-y-scroll'>
+            <div className="md:p-10 p-4 space-y-4">
+                <h2 className="text-lg font-medium">Delivered History</h2>
+                {orders.length > 0 ? (
+                    orders.map((order, index) => (
+                        <div key={index} className="flex flex-col md:items-center md:flex-row gap-5 justify-between p-5 max-w-4xl rounded-md border border-gray-300">
 
-      // 4. API Call
-      const response = await axios.post(
-        `http://localhost:4000/api/delivery/accept`, 
-        { 
-          orderId: orderId, 
-          deliveryBoyId: deliveryBoyId 
-        }, 
-        { headers: { token: token } } 
-      );
+                            <div className="flex gap-5 max-w-80">
+                                <img className="w-12 h-12 object-cover" src={assets.box_icon} alt="boxIcon" />
+                                <div>
+                                    {order.items.map((item, idx) => (
+                                        <div key={idx} className="flex flex-col">
+                                            <p className="font-medium">
+                                                {item.product ? item.product.name : "Product"}{" "} 
+                                                <span className="text-primary">x {item.quantity}</span>
+                                            </p>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
 
-      if (response.data.success) {
-        toast.success("Order Accepted!");
-        navigate('/delivery/orders/accepted'); 
-      }
-      
-    } catch (error) {
-      console.error("Acceptance failed:", error);
-      // Only show error if it's a server message (like "Order already taken")
-      const msg = error.response?.data?.message || "Failed to accept order";
-      toast.error(msg);
-    }
-  };
+                            <div className="text-sm md:text-base text-black/60">
+                                <p className='text-black/80 font-semibold'>
+                                    Customer: {order.address.firstName} {order.address.lastName}
+                                </p>
+                                <p>{order.address.street}, {order.address.city}</p>
+                                <p>{order.address.phone}</p>
+                            </div>
 
-  return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 p-4">
-      {orders.length === 0 ? (
-        <div className="col-span-full text-center py-10 bg-gray-50 rounded-xl">
-            <p className="text-gray-500">No available orders at the moment.</p>
+                            <p className="font-medium text-lg my-auto">
+                                {currency}{order.amount}
+                            </p>
+
+                            <div className="flex flex-col text-sm md:text-base text-black/60">
+                                <p>Payment: {order.paymentType || (order.payment ? "Online" : "COD")}</p>
+                                <p>Date: {order.createdAt ? new Date(order.createdAt).toLocaleDateString() : "N/A"}</p>
+                                
+                                {/* Status logic consistent with your backend */}
+                                <p className="text-green-600 font-medium">Status: {order.status}</p>
+                            </div>
+                        </div>
+                    ))
+                ) : (
+                    <div className="text-gray-500 text-center py-10">No delivered orders in your history yet.</div>
+                )}
+            </div>
         </div>
-      ) : (
-        orders.map((order) => (
-          <div key={order._id} className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex justify-between items-start mb-4">
-                <div>
-                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Order ID</h3>
-                    <p className="font-mono text-sm text-gray-700">#{order._id.slice(-6)}</p>
-                </div>
-                <span className="bg-green-100 text-green-700 text-xs font-bold px-2 py-1 rounded-lg">
-                    ₹{order.amount}
-                </span>
-            </div>
+    )
+}
 
-            <div className="space-y-2 mb-6">
-                <p className="text-sm text-gray-600">
-                    <strong>Customer:</strong> {order.address?.firstName} {order.address?.lastName}
-                </p>
-                <p className="text-sm text-gray-600">
-                    <strong>City:</strong> {order.address?.city}
-                </p>
-            </div>
-
-            <button 
-              onClick={() => handleAcceptOrder(order._id)}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition-colors active:scale-95"
-            >
-              Accept Order
-            </button>
-          </div>
-        ))
-      )}
-    </div>
-  );
-};
-
-export default DeliveryOrders;
+export default DeliveredOrders;

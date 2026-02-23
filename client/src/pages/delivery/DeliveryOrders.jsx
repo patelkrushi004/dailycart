@@ -1,93 +1,121 @@
-import React, { useEffect, useState } from 'react'
-import { useAppContext } from '../../context/AppContext'
-import { assets } from '../../assets/assets'
-import toast from 'react-hot-toast'
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import axios from "axios";
+import { toast } from "react-hot-toast";
 
-const DeliveredOrders = () => { // Renamed to match your Sidebar/App.js intent
-    const { currency, axios } = useAppContext()
-    const [orders, setOrders] = useState([])
+const DeliveryOrders = ({ orders = [] }) => {
+  const navigate = useNavigate();
+  const [loadingId, setLoadingId] = useState(null);
 
-    const fetchDeliveryOrders = async () => {
-        try {
-            // Logic Fix: Get token for authentication
-            const token = localStorage.getItem('deliveryToken');
-            const deliveryUser = JSON.parse(localStorage.getItem('deliveryUser'));
-            const deliveryBoyId = deliveryUser?._id || deliveryUser?.id;
+  const handleAcceptOrder = async (orderId) => {
+    console.log("ACCEPT CLICKED:", orderId);
 
-            const { data } = await axios.get('/api/delivery/available', { 
-                params: { deliveryBoyId },
-                headers: { token } 
-            });
-            
-            if (data.success) {
-                // Logic Fix: Only show orders that are actually 'Delivered' for the History page
-                const history = data.orders.filter(o => 
-                    o.deliveryBoy === deliveryBoyId && o.status === 'Delivered'
-                );
-                setOrders(history.reverse());
-            } else {
-                toast.error(data.message)
-            }
-        } catch (error) {
-            console.error("Fetch Delivery Orders Error:", error)
-            toast.error(error.message)
+    try {
+      setLoadingId(orderId);
+
+      const token = localStorage.getItem("deliveryToken");
+      const storedUser = localStorage.getItem("deliveryUser");
+
+      // ✅ LOGIN CHECK
+      if (!token || !storedUser) {
+        toast.error("Please login again");
+        setLoadingId(null);
+        return;
+      }
+
+      const user = JSON.parse(storedUser);
+      const deliveryBoyId = user?._id || user?.id;
+
+      if (!deliveryBoyId) {
+        toast.error("Delivery partner not found");
+        setLoadingId(null);
+        return;
+      }
+
+      // ✅ API CALL
+      const { data } = await axios.post(
+        "http://localhost:4000/api/delivery/accept",
+        { orderId, deliveryBoyId },
+        {
+          headers: { token },
         }
-    };
+      );
 
-    useEffect(() => {
-        fetchDeliveryOrders();
-    }, [])
+      console.log("ACCEPT RESPONSE:", data);
 
-    return (
-        /* UI and CSS remain exactly as you provided */
-        <div className='no-scrollbar flex-1 h-[95vh] overflow-y-scroll'>
-            <div className="md:p-10 p-4 space-y-4">
-                <h2 className="text-lg font-medium">Delivered History</h2>
-                {orders.length > 0 ? (
-                    orders.map((order, index) => (
-                        <div key={index} className="flex flex-col md:items-center md:flex-row gap-5 justify-between p-5 max-w-4xl rounded-md border border-gray-300">
+      if (data.success) {
+        toast.success("Order Accepted ✅");
 
-                            <div className="flex gap-5 max-w-80">
-                                <img className="w-12 h-12 object-cover" src={assets.box_icon} alt="boxIcon" />
-                                <div>
-                                    {order.items.map((item, idx) => (
-                                        <div key={idx} className="flex flex-col">
-                                            <p className="font-medium">
-                                                {item.product ? item.product.name : "Product"}{" "} 
-                                                <span className="text-primary">x {item.quantity}</span>
-                                            </p>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
+        // ✅ ABSOLUTE PATH
+        navigate("/delivery/orders/accepted");
+      } else {
+        toast.error(data.message || "Accept failed");
+      }
+    } catch (error) {
+      console.error("ACCEPT ERROR:", error);
 
-                            <div className="text-sm md:text-base text-black/60">
-                                <p className='text-black/80 font-semibold'>
-                                    Customer: {order.address.firstName} {order.address.lastName}
-                                </p>
-                                <p>{order.address.street}, {order.address.city}</p>
-                                <p>{order.address.phone}</p>
-                            </div>
+      toast.error(
+        error?.response?.data?.message ||
+          "Server error while accepting order"
+      );
+    } finally {
+      setLoadingId(null);
+    }
+  };
 
-                            <p className="font-medium text-lg my-auto">
-                                {currency}{order.amount}
-                            </p>
-
-                            <div className="flex flex-col text-sm md:text-base text-black/60">
-                                <p>Payment: {order.paymentType || (order.payment ? "Online" : "COD")}</p>
-                                <p>Date: {order.createdAt ? new Date(order.createdAt).toLocaleDateString() : "N/A"}</p>
-                                
-                                {/* Status logic consistent with your backend */}
-                                <p className="text-green-600 font-medium">Status: {order.status}</p>
-                            </div>
-                        </div>
-                    ))
-                ) : (
-                    <div className="text-gray-500 text-center py-10">No delivered orders in your history yet.</div>
-                )}
-            </div>
+  return (
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 p-4">
+      {orders.length === 0 ? (
+        <div className="col-span-full text-center py-10 bg-gray-50 rounded-xl">
+          <p className="text-gray-500">
+            No available orders at the moment.
+          </p>
         </div>
-    )
-}
+      ) : (
+        orders.map((order) => (
+          <div
+            key={order._id}
+            className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow"
+          >
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+                  Order ID
+                </h3>
+                <p className="font-mono text-sm text-gray-700">
+                  #{order?._id?.slice(-6)}
+                </p>
+              </div>
 
-export default DeliveredOrders;
+              <span className="bg-green-100 text-green-700 text-xs font-bold px-2 py-1 rounded-lg">
+                ₹{order?.amount}
+              </span>
+            </div>
+
+            <div className="space-y-2 mb-6">
+              <p className="text-sm text-gray-600">
+                <strong>Customer:</strong>{" "}
+                {order?.address?.firstName || "Guest"}{" "}
+                {order?.address?.lastName || ""}
+              </p>
+
+              <p className="text-sm text-gray-600">
+                <strong>City:</strong> {order?.address?.city || "N/A"}
+              </p>
+            </div>
+
+            <button
+              onClick={() => handleAcceptOrder(order._id)}
+              disabled={loadingId === order._id}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition active:scale-95 disabled:opacity-50"
+            >
+              {loadingId === order._id ? "Accepting..." : "Accept Order"}
+            </button>
+          </div>
+        ))
+      )}
+    </div>
+  );
+};
+
+export default DeliveryOrders;

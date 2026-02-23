@@ -1,25 +1,10 @@
-import mongoose from "mongoose";
+const mongoose = require("mongoose");
 
 const adminSchema = new mongoose.Schema({
-  // Link admin to User
-  user: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'user',
-    required: true
-  },
-
-  phone: {
-    type: String
-  },
-
-  isSuperAdmin: {
-    type: Boolean,
-    default: false
-  }
-
+  name: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
+  password: { type: String, required: true }, // hashed password
+  role: { type: String, default: "admin" },
 }, { timestamps: true });
 
-const Admin =
-  mongoose.models.admin || mongoose.model('admin', adminSchema);
-
-export default Admin;
+module.exports = mongoose.model("Admin", adminSchema);

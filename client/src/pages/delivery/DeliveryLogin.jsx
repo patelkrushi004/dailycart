@@ -18,25 +18,32 @@ const DeliveryLogin = () => {
             const data = response.data;
 
             if (data.success) {
-                // 1. CLEAR old data to avoid "No ID found" ghost errors
+                // DEBUG: Look at your console to see what the backend is sending
+                console.log("Login Data Received:", data);
+
+                // 1. CLEAR old data
                 localStorage.removeItem('deliveryToken');
                 localStorage.removeItem('deliveryUser');
 
                 // 2. SAVE the new data
-                localStorage.setItem('deliveryToken', data.token);
-                localStorage.setItem('deliveryUser', JSON.stringify(data.user));
-                
-                toast.success("Login Successful!");
+                // We ensure 'data.user' exists before saving
+                if (data.user) {
+                    localStorage.setItem('deliveryToken', data.token);
+                    localStorage.setItem('deliveryUser', JSON.stringify(data.user));
+                    
+                    toast.success("Login Successful!");
 
-                // 3. SMALL DELAY: Ensures LocalStorage is fully written before redirect
-                // This prevents the "No ID found" error on the dashboard
-                setTimeout(() => {
-                    if (data.user.isFirstLogin) {
-                        navigate('/delivery/setup');
-                    } else {
-                        navigate('/delivery/dashboard'); 
-                    }
-                }, 150); 
+                    // 3. Navigate after a tiny delay
+                    setTimeout(() => {
+                        if (data.user.isFirstLogin) {
+                            navigate('/delivery/setup');
+                        } else {
+                            navigate('/delivery/dashboard'); 
+                        }
+                    }, 150); 
+                } else {
+                    toast.error("User data missing from server response");
+                }
 
             } else {
                 toast.error(data.message || "Invalid credentials");

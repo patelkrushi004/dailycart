@@ -8,32 +8,32 @@ import {
     getDeliveryHistory, 
     updateDeliverySetup 
 } from '../controllers/deliveryController.js';
+// If you have an auth middleware, import it here
+// import authDelivery from '../middleware/authDelivery.js'; 
 
 const deliveryRouter = express.Router();
 
-// --- AUTHENTICATION ---
+// --- AUTHENTICATION (Public) ---
 deliveryRouter.post('/register', registerDelivery);
 deliveryRouter.post('/login', loginDelivery);
 
 // --- ORDER OPERATIONS ---
 
-// 1. Get all available/active orders for the dashboard
+// 1. Get orders (Available or Accepted)
+// Frontend matches: axios.get('/api/delivery/available')
 deliveryRouter.get('/available', getAvailableOrders);
 
-// 2. Assign a delivery partner to an order
+// 2. Accept an order
+// Frontend matches: axios.post('/api/delivery/accept')
 deliveryRouter.post('/accept', acceptOrder);
 
-// 3. Update order to "Delivered" or "Cancelled"
-// This matches: axios.post('http://localhost:4000/api/delivery/status', ...)
+// 3. Update status (Delivered/Cancelled)
 deliveryRouter.post('/status', updateDeliveryStatus);
 
-// 4. Get history (Delivered/Cancelled) for a specific partner
-// This matches: axios.get(`http://localhost:4000/api/delivery/list/${deliveryBoyId}`)
+// 4. Get specific partner history
 deliveryRouter.get('/list/:deliveryBoyId', getDeliveryHistory);
 
 // --- PROFILE ---
-
-// Update vehicle and phone details
 deliveryRouter.post('/setup/:id', updateDeliverySetup);
 
 export default deliveryRouter;
