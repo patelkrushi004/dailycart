@@ -1,176 +1,137 @@
-import React, { useEffect, useState } from "react";
-import axios from "axios";
-import { toast } from "react-hot-toast";
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
+import { toast } from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
 
 const AcceptedOrders = () => {
-  const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
+    const [orders, setOrders] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [updatingId, setUpdatingId] = useState(null); // Track which button is clicked
+    const navigate = useNavigate();
 
-  const deliveryToken = localStorage.getItem("deliveryToken");
-  const deliveryData =
-    JSON.parse(localStorage.getItem("deliveryUser")) || {};
+    // 1. Fetch Orders Logic
+    const fetchOrders = async () => {
+        try {
+            setLoading(true);
+            const token = localStorage.getItem('deliveryToken');
+            const userData = localStorage.getItem('deliveryUser');
+            
+            if (!userData || !token) {
+                navigate('/delivery/login');
+                return;
+            }
 
-  const deliveryBoyId = deliveryData._id || deliveryData.id;
+            const user = JSON.parse(userData);
+            const userId = user._id;
 
-  // ✅ FETCH ACCEPTED ORDERS (CORRECT API)
-  const fetchAcceptedOrders = async () => {
-    try {
-      if (!deliveryBoyId || !deliveryToken) {
-        toast.error("Please login again");
-        return;
-      }
-
-      setLoading(true);
-
-      const { data } = await axios.get(
-        `http://localhost:4000/api/delivery/accepted?deliveryBoyId=${deliveryBoyId}`,
-        {
-          headers: { token: deliveryToken },
+            const { data } = await axios.get(`http://localhost:4000/api/delivery/available`, {
+                params: { deliveryBoyId: userId },
+                headers: { token }
+            });
+            
+            if (data.success) {
+                // Keep only orders assigned to this driver that are in 'Order Accepted' state
+                const myTasks = data.orders.filter(o => {
+                    const dboyId = typeof o.deliveryBoy === 'object' ? o.deliveryBoy?._id : o.deliveryBoy;
+                    return o.status === "Order Accepted" && dboyId === userId;
+                });
+                setOrders(myTasks);
+            }
+        } catch (error) {
+            console.error("Fetch Error:", error);
+            toast.error("Failed to load active deliveries");
+        } finally {
+            setLoading(false);
         }
-      );
+    };
 
-      console.log("ACCEPTED API RESPONSE:", data);
+    // 2. Button Action Logic (Update Status)
+    const updateStatus = async (orderId, newStatus) => {
+        if (updatingId) return; // Prevent double-clicks
 
-      if (data.success) {
-        setOrders(data.orders);
-      } else {
-        setOrders([]);
-      }
-    } catch (error) {
-      console.error("Fetch accepted error:", error);
-      toast.error("Error loading active tasks");
-      setOrders([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+        try {
+            setUpdatingId(orderId); // Start loading state for this specific row
+            const token = localStorage.getItem('deliveryToken');
+            
+            console.log("Attempting Update:", { orderId, status: newStatus });
 
-  // ✅ UPDATE STATUS
-  const updateStatus = async (orderId, newStatus) => {
-    try {
-      const { data } = await axios.post(
-        "http://localhost:4000/api/delivery/status",
-        {
-          orderId,
-          status: newStatus,
-        },
-        {
-          headers: { token: deliveryToken },
+            const { data } = await axios.post(`http://localhost:4000/api/delivery/update-status`, 
+                { 
+                    orderId: orderId, 
+                    status: newStatus 
+                }, 
+                { 
+                    headers: { token } 
+                }
+            );
+
+            if (data.success) {
+                toast.success(`Order marked as ${newStatus}`);
+                // Remove the order from the list since it's no longer "Active"
+                setOrders(prev => prev.filter(o => o._id !== orderId));
+            } else {
+                toast.error(data.message || "Could not update order");
+            }
+        } catch (error) {
+            console.error("Button Error:", error.response?.data || error.message);
+            toast.error("Network error: Backend might be down");
+        } finally {
+            setUpdatingId(null); // End loading state
         }
-      );
+    };
 
-      if (data.success) {
-        toast.success(`Order marked as ${newStatus}`);
-        fetchAcceptedOrders();
-      } else {
-        toast.error(data.message || "Update failed");
-      }
-    } catch (error) {
-      toast.error("Failed to update order status");
-    }
-  };
+    useEffect(() => {
+        fetchOrders();
+    }, []);
 
-  // ✅ OPEN IN GOOGLE MAPS
-  const openInMaps = (address) => {
-    if (!address) return;
+    if (loading) return <div className="p-10 text-center animate-pulse">Syncing with server...</div>;
 
-    const query = encodeURIComponent(
-      `${address.street}, ${address.city}, ${address.state} ${address.zipcode}`
-    );
-
-    window.open(
-      `https://www.google.com/maps/search/?api=1&query=${query}`,
-      "_blank"
-    );
-  };
-
-  useEffect(() => {
-    fetchAcceptedOrders();
-  }, []);
-
-  if (loading)
     return (
-      <div className="p-10 text-center text-gray-500">
-        Loading active tasks...
-      </div>
-    );
-
-  return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-      {/* HEADER */}
-      <div className="p-6 border-b flex justify-between items-center bg-blue-50">
-        <h3 className="text-xl font-bold">My Accepted Tasks</h3>
-
-        <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-bold">
-          {orders.length} Active
-        </span>
-      </div>
-
-      <div className="p-6">
-        {orders.length === 0 ? (
-          <div className="text-center py-16 text-gray-400">
-            No active deliveries.
-          </div>
-        ) : (
-          <div className="grid gap-6 md:grid-cols-2">
-            {orders.map((order) => (
-              <div
-                key={order._id}
-                className="border-2 border-blue-100 p-5 rounded-2xl shadow-sm"
-              >
-                <h4 className="font-bold text-lg">
-                  {order.address?.firstName} {order.address?.lastName}
-                </h4>
-
-                <p className="text-sm text-gray-600">
-                  ₹{order.amount}
-                </p>
-
-                <p className="text-sm text-gray-500 mt-2">
-                  {order.address?.street}, {order.address?.city}
-                </p>
-
-                <a
-                  href={`tel:${order.address?.phone}`}
-                  className="text-blue-600 text-sm font-bold"
-                >
-                  {order.address?.phone}
-                </a>
-
-                {/* ACTION BUTTONS */}
-                <div className="flex gap-2 mt-4">
-                  <button
-                    onClick={() =>
-                      updateStatus(order._id, "Delivered")
-                    }
-                    className="flex-1 bg-green-600 text-white py-3 rounded-xl font-bold"
-                  >
-                    Delivered
-                  </button>
-
-                  <button
-                    onClick={() =>
-                      updateStatus(order._id, "Cancelled")
-                    }
-                    className="flex-[0.6] border border-red-200 text-red-500 py-3 rounded-xl font-bold"
-                  >
-                    Cancel
-                  </button>
+        <div className="p-6 max-w-4xl mx-auto">
+            <h2 className="text-2xl font-bold mb-6 text-gray-800">Your Active Deliveries</h2>
+            
+            {orders.length === 0 ? (
+                <div className="text-center py-20 border-2 border-dashed rounded-2xl text-gray-400 bg-gray-50">
+                    <p className="text-lg">No active orders right now.</p>
+                    <p className="text-sm">Accepted orders from your dashboard will appear here.</p>
                 </div>
-
-                <button
-                  onClick={() => openInMaps(order.address)}
-                  className="w-full bg-gray-100 mt-3 py-2 rounded-lg text-sm font-bold"
-                >
-                  Navigate in Maps
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
+            ) : (
+                <div className="grid gap-4">
+                    {orders.map(order => (
+                        <div key={order._id} className="bg-white border p-5 rounded-xl shadow-sm flex flex-col md:flex-row justify-between items-center transition-all hover:shadow-md">
+                            <div className="mb-4 md:mb-0">
+                                <p className="font-bold text-gray-900 text-lg">
+                                    {order.address.firstName} {order.address.lastName}
+                                </p>
+                                <p className="text-sm text-gray-600">{order.address.street}, {order.address.city}</p>
+                                <p className="text-blue-600 font-bold mt-2">Amount: ₹{order.amount}</p>
+                            </div>
+                            
+                            <div className="flex gap-3 w-full md:w-auto">
+                                <button 
+                                    disabled={updatingId === order._id}
+                                    onClick={() => updateStatus(order._id, "Delivered")}
+                                    className={`flex-1 md:flex-none px-6 py-2 rounded-lg text-sm font-bold text-white transition-all ${
+                                        updatingId === order._id ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'
+                                    }`}
+                                >
+                                    {updatingId === order._id ? "..." : "Mark Delivered"}
+                                </button>
+                                
+                                <button 
+                                    disabled={updatingId === order._id}
+                                    onClick={() => updateStatus(order._id, "Cancelled")}
+                                    className="px-6 py-2 rounded-lg text-sm font-bold bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
 };
 
 export default AcceptedOrders;

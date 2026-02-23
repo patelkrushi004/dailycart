@@ -14,35 +14,43 @@ const DeliveryLogin = () => {
         setLoading(true);
 
         try {
-            const response = await axios.post('http://localhost:4000/api/delivery/login', { email, password });
+            const response = await axios.post('http://localhost:4000/api/delivery/login', { 
+                email, 
+                password 
+            });
+            
             const data = response.data;
 
             if (data.success) {
-                // DEBUG: Look at your console to see what the backend is sending
-                console.log("Login Data Received:", data);
-
-                // 1. CLEAR old data
+                // 1. Clear any old, corrupted session data first
                 localStorage.removeItem('deliveryToken');
                 localStorage.removeItem('deliveryUser');
 
-                // 2. SAVE the new data
-                // We ensure 'data.user' exists before saving
-                if (data.user) {
-                    localStorage.setItem('deliveryToken', data.token);
-                    localStorage.setItem('deliveryUser', JSON.stringify(data.user));
-                    
-                    toast.success("Login Successful!");
+                // 2. Validate that we actually received a user and a token
+                if (data.user && data.token) {
+                    // Ensure the user object has an ID before saving
+                    const userData = {
+                        ...data.user,
+                        _id: data.user._id || data.user.id // Universal ID check
+                    };
 
-                    // 3. Navigate after a tiny delay
+                    // 3. Save the new data (Stringify is mandatory)
+                    localStorage.setItem('deliveryToken', data.token);
+                    localStorage.setItem('deliveryUser', JSON.stringify(userData));
+                    
+                    toast.success("Logged in successfully!");
+
+                    // 4. SMART NAVIGATION
+                    // Using a short delay to ensure LocalStorage is finalized
                     setTimeout(() => {
                         if (data.user.isFirstLogin) {
                             navigate('/delivery/setup');
                         } else {
                             navigate('/delivery/dashboard'); 
                         }
-                    }, 150); 
+                    }, 200); 
                 } else {
-                    toast.error("User data missing from server response");
+                    toast.error("Login failed: User profile missing from server.");
                 }
 
             } else {
@@ -50,7 +58,7 @@ const DeliveryLogin = () => {
             }
         } catch (error) {
             console.error("Login error:", error);
-            const serverMsg = error.response?.data?.message || "Login failed";
+            const serverMsg = error.response?.data?.message || "Connection failed to server";
             toast.error(serverMsg);
         } finally {
             setLoading(false);
@@ -69,15 +77,15 @@ const DeliveryLogin = () => {
                     </p>
                 </div>
                 <form className="mt-8 space-y-6" onSubmit={onSubmitHandler}>
-                    <div className="rounded-md shadow-sm -space-y-px">
-                        <div className="mb-4">
+                    <div className="space-y-4">
+                        <div>
                             <label className="block text-sm font-medium text-gray-700">Email Address</label>
                             <input
                                 type="email"
                                 required
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                className="appearance-none rounded-lg relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                                className="mt-1 appearance-none rounded-lg relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                                 placeholder="delivery@example.com"
                             />
                         </div>
@@ -88,7 +96,7 @@ const DeliveryLogin = () => {
                                 required
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                className="appearance-none rounded-lg relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                                className="mt-1 appearance-none rounded-lg relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                                 placeholder="••••••••"
                             />
                         </div>
@@ -98,9 +106,9 @@ const DeliveryLogin = () => {
                         <button
                             type="submit"
                             disabled={loading}
-                            className={`group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-bold rounded-xl text-white ${
-                                loading ? 'bg-blue-400' : 'bg-blue-600 hover:bg-blue-700'
-                            } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all`}
+                            className={`group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-bold rounded-xl text-white transition-all ${
+                                loading ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
+                            } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 shadow-md`}
                         >
                             {loading ? "Verifying..." : "Sign In"}
                         </button>

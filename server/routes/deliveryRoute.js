@@ -8,32 +8,25 @@ import {
     getDeliveryHistory, 
     updateDeliverySetup 
 } from '../controllers/deliveryController.js';
-// If you have an auth middleware, import it here
-// import authDelivery from '../middleware/authDelivery.js'; 
 
 const deliveryRouter = express.Router();
 
-// --- AUTHENTICATION (Public) ---
+// --- Auth Routes ---
 deliveryRouter.post('/register', registerDelivery);
 deliveryRouter.post('/login', loginDelivery);
 
-// --- ORDER OPERATIONS ---
-
-// 1. Get orders (Available or Accepted)
-// Frontend matches: axios.get('/api/delivery/available')
+// --- Dashboard Routes ---
 deliveryRouter.get('/available', getAvailableOrders);
 
-// 2. Accept an order
-// Frontend matches: axios.post('/api/delivery/accept')
-deliveryRouter.post('/accept', acceptOrder);
+// CHANGED: Matches DeliveryDashboard.jsx axios.post('.../accept-order')
+deliveryRouter.post('/accept-order', acceptOrder); 
 
-// 3. Update status (Delivered/Cancelled)
-deliveryRouter.post('/status', updateDeliveryStatus);
+// --- Order Management ---
+// Matches DeliveredOrders.jsx axios.post('.../update-status')
+deliveryRouter.post('/update-status', updateDeliveryStatus);
 
-// 4. Get specific partner history
+// --- History & Profile ---
 deliveryRouter.get('/list/:deliveryBoyId', getDeliveryHistory);
-
-// --- PROFILE ---
 deliveryRouter.post('/setup/:id', updateDeliverySetup);
 
 export default deliveryRouter;
