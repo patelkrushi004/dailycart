@@ -10,22 +10,16 @@ const DeliveryLayout = () => {
         return <Navigate to="/delivery/login" replace />;
     }
 
-    // UPDATED LINKS: Added the 'History' tab specifically
     const sidebarLinks = [
         { 
-            name: "Available Orders", 
-            path: "/delivery/dashboard", 
-            icon: assets.order_icon 
-        },
-        { 
-            name: "Current Task", 
-            path: "/delivery/delivered", // The page with the "Confirm" button
+            name: "Current Orders", 
+            path: "/delivery/delivered", // Updated to match your URL requirement
             icon: assets.tick_icon 
         },
         { 
             name: "Delivery History", 
-            path: "/delivery/history", // The new page where orders stay forever
-            icon: assets.order_icon // You can change this to a clock/history icon if available
+            path: "/delivery/history", 
+            icon: assets.order_icon 
         },
         { 
             name: "Profile Setup", 
@@ -63,7 +57,6 @@ const DeliveryLayout = () => {
                         <NavLink 
                             to={item.path} 
                             key={item.name} 
-                            end={item.path === "/delivery/dashboard"} 
                             className={({ isActive }) => `flex items-center py-4 px-4 gap-3 transition-all ${
                                 isActive ? "border-r-4 bg-blue-50 border-blue-600 text-blue-700" : "text-gray-600 hover:bg-gray-50"
                             }`}
