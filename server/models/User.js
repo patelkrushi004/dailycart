@@ -12,19 +12,21 @@ const userSchema = new mongoose.Schema({
   },
 
   // --- DELIVERY SPECIFIC FIELDS ---
-  // These stay empty for customers but get filled for delivery partners
+  // isFirstLogin controls the "Verify Profile" redirect logic
   isFirstLogin: { type: Boolean, default: true },
   phone: { type: String, default: "" },
   vehicleType: { 
     type: String, 
-    enum: ['bike', 'scooter', 'car', 'none'], 
+    // Updated enum to match your Frontend <option> values exactly
+    enum: ['Bike', 'Scooter', 'Cycle', 'Car', 'none', ''], 
     default: 'none' 
   },
   
   // --- CUSTOMER SPECIFIC FIELDS ---
   cartItems: { type: Object, default: {} },
-}, { minimize: false, timestamps: true }); // added timestamps to track when users join
+}, { minimize: false, timestamps: true });
 
+// Check if model exists before creating to prevent compilation errors
 const User = mongoose.models.user || mongoose.model('user', userSchema);
 
 export default User;

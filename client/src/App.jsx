@@ -27,23 +27,21 @@ import DeliveryLogin from './components/delivery/DeliveryLogin';
 import DeliveredOrders from './pages/delivery/DeliveredOrders'; 
 import CancelledOrders from './pages/delivery/CancelledOrders';
 import AcceptedOrders from './pages/delivery/AcceptedOrders';
+import DeliveryHistory from './pages/delivery/DeliveryHistory'; // IMPORTED HERE
 
 const App = () => {
   const location = useLocation();
   const { showUserLogin, isSeller } = useAppContext();
   
-  // Initialize state directly from localStorage
   const [deliveryToken, setDeliveryToken] = useState(localStorage.getItem('deliveryToken'));
 
-  // Listen for route changes AND storage changes to sync the token
   useEffect(() => {
     const handleStorageChange = () => {
       setDeliveryToken(localStorage.getItem('deliveryToken'));
     };
 
-    handleStorageChange(); // Run on location change
+    handleStorageChange(); 
 
-    // Listen for login/logout events across the app
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
   }, [location]); 
@@ -78,34 +76,30 @@ const App = () => {
 
           {/* --- DELIVERY ROUTES --- */}
           
-          {/* 1. Public Delivery Login Route */}
           <Route 
             path='/delivery/login' 
             element={deliveryToken ? <Navigate to="/delivery/dashboard" /> : <DeliveryLogin />} 
           />
 
-          {/* 2. Protected Delivery Routes */}
           <Route 
             path='/delivery' 
             element={deliveryToken ? <DeliveryLayout /> : <Navigate to="/delivery/login" />}
           >
-            {/* Redirect /delivery directly to /delivery/dashboard */}
             <Route index element={<Navigate to="dashboard" />} />
-            
             <Route path="dashboard" element={<DeliveryDashboard />} />
             
-            {/* Nested Orders Routes */}
             <Route path="orders">
                 <Route index element={<Navigate to="/delivery/dashboard" />} /> 
                 <Route path="accepted" element={<AcceptedOrders />} />
             </Route>
 
+            {/* Added History and ensured Delivered is present */}
             <Route path='delivered' element={<DeliveredOrders />} />
+            <Route path='history' element={<DeliveryHistory />} /> 
             <Route path='cancelled' element={<CancelledOrders />} />
             <Route path='setup' element={<DeliverySetup />} />
           </Route>
 
-          {/* Catch-all for misspelled delivery URLs */}
           <Route path='/delivery/*' element={<Navigate to="/delivery/login" />} />
 
         </Routes>

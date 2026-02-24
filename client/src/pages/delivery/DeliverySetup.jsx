@@ -9,9 +9,8 @@ const DeliverySetup = () => {
   const [email, setEmail] = useState('');
   const navigate = useNavigate();
 
-  // Get delivery user data and token from localStorage
   const storedData = localStorage.getItem('deliveryUser');
-  const token = localStorage.getItem('deliveryToken'); // Added token
+  const token = localStorage.getItem('deliveryToken'); 
   const deliveryInfo = storedData ? JSON.parse(storedData) : null;
 
   const handleCompleteSetup = async (e) => {
@@ -23,8 +22,8 @@ const DeliverySetup = () => {
       return;
     }
 
-    // Email validation
-    if (email !== deliveryInfo.email) {
+    // Email validation: Check if input matches the logged-in user's email
+    if (email.toLowerCase() !== deliveryInfo.email.toLowerCase()) {
       toast.error("Email does not match your login account!");
       return;
     }
@@ -32,25 +31,22 @@ const DeliverySetup = () => {
     const deliveryBoyId = deliveryInfo._id || deliveryInfo.id;
 
     try {
-      // 1. Update with Headers for security
       const { data } = await axios.put(`http://localhost:4000/api/delivery/update-setup/${deliveryBoyId}`, {
         vehicleType,
         phone,
         email,
         isFirstLogin: false 
       }, {
-        headers: { token } // Pass token to authorize the update
+        headers: { token } 
       });
 
       if (data.success) {
-        // 2. Update local storage
-        const updatedUser = { ...deliveryInfo, isFirstLogin: false, phone, vehicleType };
-        localStorage.setItem('deliveryUser', JSON.stringify(updatedUser));
+        // Update local storage with full user object from backend
+        // This ensures isFirstLogin is false and phone/vehicle are saved locally
+        localStorage.setItem('deliveryUser', JSON.stringify(data.user));
 
         toast.success("Profile Setup Complete!");
-        
-        // 3. Navigate to Dashboard (matching App.js corrected path)
-        navigate('/delivery/dashboard');
+        navigate('/delivery/delivered');
       }
     } catch (error) {
         console.error("Setup Error:", error);
