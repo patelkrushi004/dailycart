@@ -14,16 +14,10 @@ export const registerDelivery = async (req, res) => {
         if (exists) return res.json({ success: false, message: "User already exists" });
 
         const hashedPassword = await bcrypt.hash(password, 10);
-        const user = await User.create({ 
-            name, 
-            email, 
-            password: hashedPassword, 
-            role: 'delivery',
-            isFirstLogin: true 
-        });
+        const user = await User.create({ name, email, password: hashedPassword, role: 'delivery' });
 
         const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET || "default_secret_key");
-        res.json({ success: true, token, user: { _id: user._id, name: user.name, email: user.email, isFirstLogin: true } });
+        res.json({ success: true, token, user: { _id: user._id, name: user.name, email: user.email } });
     } catch (error) {
         console.error(error);
         res.status(500).json({ success: false, message: error.message });
@@ -42,16 +36,7 @@ export const loginDelivery = async (req, res) => {
         if (!isMatch) return res.json({ success: false, message: "Invalid password" });
 
         const token = jwt.sign({ id: delivery._id }, process.env.JWT_SECRET || "default_secret_key", { expiresIn: "30d" });
-        res.json({ 
-            success: true, 
-            token, 
-            user: { 
-                _id: delivery._id, 
-                name: delivery.name, 
-                email: delivery.email, 
-                isFirstLogin: delivery.isFirstLogin 
-            } 
-        });
+        res.json({ success: true, token, user: { _id: delivery._id, name: delivery.name, email: delivery.email, isFirstLogin: delivery.isFirstLogin } });
     } catch (error) {
         console.error(error);
         res.status(500).json({ success: false, message: error.message });
@@ -73,15 +58,19 @@ export const getAvailableOrders = async (req, res) => {
     }
 };
 
-// --- ACCEPT & COMPLETE ORDER ---
+// --- ACCEPT & COMPLETE ORDER (UPDATED: NO HISTORY) ---
 export const acceptOrder = async (req, res) => {
     try {
-        const { orderId } = req.body;
-        if (!orderId) return res.json({ success: false, message: "Order ID is required" });
+        const { orderId } = req.body; // Removed deliveryBoyId
 
+        if (!orderId) {
+            return res.json({ success: false, message: "Order ID is required" });
+        }
+
+        // We do NOT save deliveryBoyId here so it doesn't link to history
         const order = await Order.findByIdAndUpdate(orderId, {
-            status: "Delivered",
-            isPaid: true,
+            status: "Delivered",      // Updates Customer App
+            isPaid: true,             // Updates Seller App
             deliveryStatus: "delivered",
             deliveredAt: Date.now()
         }, { new: true });
@@ -95,12 +84,13 @@ export const acceptOrder = async (req, res) => {
     }
 };
 
-// --- DELIVERY HISTORY ---
+// --- DELIVERY HISTORY (STAYING AS IS, BUT WILL BE EMPTY) ---
 export const getDeliveryHistory = async (req, res) => {
     try {
         const { deliveryBoyId } = req.params;
         if (!deliveryBoyId || deliveryBoyId === "undefined") return res.json({ success: true, orders: [] });
 
+        // Since we don't save deliveryBoyId in acceptOrder anymore, this will return empty
         const orders = await Order.find({ deliveryBoy: deliveryBoyId, status: "Delivered" })
             .populate('address')
             .populate({ path: 'items.product', model: 'product' })
@@ -134,37 +124,17 @@ export const updateDeliveryStatus = async (req, res) => {
     }
 };
 
-// --- SETUP PROFILE (FIXED NODEMON CRASH) ---
+// --- SETUP PROFILE ---
 export const updateDeliverySetup = async (req, res) => {
     try {
         const { id } = req.params;
-        const { vehicleType, phone, email } = req.body;
+        const { phone, vehicleType } = req.body;
+        if (!id) return res.json({ success: false, message: "User ID required" });
 
-        if (!id) return res.json({ success: false, message: "User ID is required" });
-
-        // Using "User" instead of "deliveryModel" to prevent crashes
-        const updatedUser = await User.findByIdAndUpdate(
-            id, 
-            {
-                vehicleType,
-                phone,
-                email, 
-                isFirstLogin: false 
-            }, 
-            { new: true }
-        ).select("-password");
-
-        if (!updatedUser) {
-            return res.json({ success: false, message: "Delivery partner not found" });
-        }
-
-        res.json({ 
-            success: true, 
-            message: "Profile Setup Complete!", 
-            user: updatedUser 
-        });
+        const user = await User.findByIdAndUpdate(id, { phone, vehicleType, isFirstLogin: false }, { new: true }).select("-password");
+        res.json({ success: true, user });
     } catch (error) {
-        console.error("Setup Error:", error);
+        console.error(error);
         res.status(500).json({ success: false, message: error.message });
     }
 };

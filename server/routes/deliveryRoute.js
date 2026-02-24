@@ -12,27 +12,25 @@ import {
 const deliveryRouter = express.Router();
 
 // --- Auth Routes ---
-// Register a new delivery partner
 deliveryRouter.post('/register', registerDelivery);
-// Login for delivery partner
 deliveryRouter.post('/login', loginDelivery);
 
-// --- Order Management Routes ---
+// --- Dashboard Routes ---
 // This fetches orders that are not yet delivered
 deliveryRouter.get('/available', getAvailableOrders);
 
-// This matches your Dashboard call to accept/complete an order
+// This matches your Dashboard call to accept an order
 deliveryRouter.post('/accept-order', acceptOrder); 
 
+// --- Order Management ---
 // This is used to change status (e.g., to 'Picked Up' or 'Delivered')
 deliveryRouter.post('/update-status', updateDeliveryStatus);
 
-// --- History & Profile Routes ---
+// --- History & Profile ---
 // Fetches completed orders for a specific delivery boy
 deliveryRouter.get('/list/:deliveryBoyId', getDeliveryHistory);
 
-// Initial profile setup (phone, vehicle type, email)
-// UPDATED: Changed to .put to match the 'axios.put' call in your Frontend
-deliveryRouter.put('/update-setup/:id', updateDeliverySetup);
+// Initial profile setup (phone, vehicle type)
+deliveryRouter.post('/setup/:id', updateDeliverySetup);
 
 export default deliveryRouter;
