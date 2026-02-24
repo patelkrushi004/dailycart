@@ -1,12 +1,227 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
+import { toast } from "react-hot-toast";
+import { Link } from "react-router-dom";
+import { assets } from "../../assets/assets";
 
 const AdminDashboard = () => {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <h1 className="text-2xl font-bold text-gray-700">Admin Dashboard</h1>
-      <p className="text-gray-500 mt-2">This page is blank for now.</p>
-    </div>
-  );
+    const [activeTab, setActiveTab] = useState('users');
+    const [data, setData] = useState([]);
+    const [stats, setStats] = useState({ totalSales: 0, totalProducts: 0, totalOrders: 0 });
+    const [loading, setLoading] = useState(false);
+    const [searchTerm, setSearchTerm] = useState("");
+    const [dateRange, setDateRange] = useState({ start: '', end: '' });
+
+    // Menu matching your icon assets
+    const menuItems = [
+        { id: 'users', label: 'Manage Users', icon: assets.order_icon },
+        { id: 'products', label: 'Manage Products', icon: assets.add_icon },
+        { id: 'orders', label: 'All Orders', icon: assets.order_icon },
+        { id: 'payments', label: 'Payments', icon: assets.product_list_icon },
+    ];
+
+    const fetchStats = async () => {
+        try {
+            const res = await axios.get("http://localhost:4000/api/admin/stats");
+            if (res.data.success) setStats(res.data.stats);
+        } catch (err) { console.error(err); }
+    };
+
+    const fetchData = async () => {
+        setLoading(true);
+        try {
+            const res = await axios.get(`http://localhost:4000/api/admin/reports/${activeTab}`, {
+                params: { search: searchTerm, startDate: dateRange.start, endDate: dateRange.end }
+            });
+            if (res.data.success) setData(res.data.data);
+        } catch (err) { toast.error("Error fetching data"); }
+        setLoading(false);
+    };
+
+    useEffect(() => { 
+        fetchData(); 
+        fetchStats(); 
+    }, [activeTab, dateRange]);
+
+    const handleUpdateStatus = async (orderId, newStatus) => {
+        try {
+            const res = await axios.post("http://localhost:4000/api/admin/update-status", { orderId, status: newStatus });
+            if (res.data.success) {
+                toast.success(`Updated to ${newStatus}`);
+                fetchData();
+            }
+        } catch (err) { toast.error("Update failed"); }
+    };
+
+    const handleDeleteProduct = async (id) => {
+        if (window.confirm("Delete this product?")) {
+            try {
+                const res = await axios.delete(`http://localhost:4000/api/admin/product/${id}`);
+                if (res.data.success) {
+                    toast.success("Deleted");
+                    fetchData();
+                    fetchStats();
+                }
+            } catch (err) { toast.error("Delete failed"); }
+        }
+    };
+
+    const downloadPDF = () => {
+        const doc = new jsPDF('l', 'mm', 'a4');
+        doc.text(`Dailycart ${activeTab.toUpperCase()} Report`, 14, 15);
+        const rows = data.map(item => [
+            item._id.substring(18), 
+            item.name || item.email, 
+            `INR ${item.price || item.amount || 0}`, 
+            item.status || item.category || 'N/A', 
+            item.createdAt?.split('T')[0]
+        ]);
+        autoTable(doc, { 
+            head: [['ID', 'Name/Email', 'Price', 'Status', 'Date']], 
+            body: rows, 
+            startY: 25,
+            theme: 'striped',
+            headStyles: { fillColor: [37, 99, 235] } // Matches your blue theme
+        });
+        doc.save(`Dailycart_${activeTab}.pdf`);
+    };
+
+    return (
+        <div className="min-h-screen flex flex-col bg-white">
+            {/* Navbar Header - Same as Delivery but with Admin Title */}
+            <div className="flex items-center justify-between px-4 md:px-8 border-b border-gray-300 py-3 bg-white sticky top-0 z-20">
+                <Link to='/'>
+                    <img src={assets.logo} alt="logo" className="w-34 md:w-38" />
+                </Link>
+                <div className="flex items-center gap-5">
+                    <p className="font-semibold md:block hidden text-gray-500 text-sm">
+                        Admin <span className="text-blue-600">Panel</span>
+                    </p>
+                    <button onClick={() => { localStorage.clear(); window.location.href='/'; }} className='border border-gray-300 rounded-full text-sm px-4 py-1 hover:bg-red-50 hover:text-red-600 transition-all'>
+                        Logout
+                    </button>
+                </div>
+            </div>
+
+            <div className="flex flex-1">
+                {/* Sidebar - Exact match to Delivery UI colors/logic */}
+                <div className="md:w-64 w-20 border-r h-[calc(100vh-65px)] border-gray-300 pt-4 flex flex-col sticky top-[65px] bg-white z-10">
+                    {menuItems.map((item) => (
+                        <button 
+                            key={item.id} 
+                            onClick={() => setActiveTab(item.id)}
+                            className={`flex items-center py-4 px-4 gap-3 transition-all border-r-4 ${
+                                activeTab === item.id 
+                                ? "bg-blue-50 border-blue-600 text-blue-700" 
+                                : "text-gray-600 border-transparent hover:bg-gray-50"
+                            }`}
+                        >
+                            <img src={item.icon} alt="" className={`w-6 h-6 ${activeTab === item.id ? 'opacity-100' : 'opacity-60'}`} />
+                            <p className="md:block hidden font-semibold text-sm">{item.label}</p>
+                        </button>
+                    ))}
+                </div>
+
+                {/* Content Area - Clean Gray background like Delivery Panel */}
+                <div className="flex-1 bg-gray-50 p-4 md:p-8 overflow-y-auto">
+                    <div className="max-w-6xl mx-auto">
+                        
+                        {/* Stats Summary */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                            <div className="bg-white p-5 border border-gray-300 rounded-lg">
+                                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Revenue</p>
+                                <h3 className="text-2xl font-bold text-gray-800">₹{stats.totalSales}</h3>
+                            </div>
+                            <div className="bg-white p-5 border border-gray-300 rounded-lg">
+                                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Products</p>
+                                <h3 className="text-2xl font-bold text-gray-800">{stats.totalProducts}</h3>
+                            </div>
+                            <div className="bg-white p-5 border border-gray-300 rounded-lg">
+                                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Orders</p>
+                                <h3 className="text-2xl font-bold text-gray-800">{stats.totalOrders}</h3>
+                            </div>
+                        </div>
+
+                        {/* Search & Actions */}
+                        <div className="bg-white p-4 border border-gray-300 rounded-lg mb-6 flex flex-wrap justify-between items-center gap-4">
+                            <div className="flex items-center gap-2">
+                                <input type="date" className="border border-gray-300 p-1.5 text-xs rounded-md" onChange={(e)=>setDateRange({...dateRange, start: e.target.value})} />
+                                <span className="text-gray-400">-</span>
+                                <input type="date" className="border border-gray-300 p-1.5 text-xs rounded-md" onChange={(e)=>setDateRange({...dateRange, end: e.target.value})} />
+                            </div>
+                            
+                            <div className="flex flex-1 md:max-w-md gap-2">
+                                <input 
+                                    type="text" placeholder={`Search ${activeTab}...`} 
+                                    className="border border-gray-300 px-4 py-2 text-sm rounded-md outline-none w-full focus:border-blue-500"
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && fetchData()}
+                                />
+                                <button onClick={downloadPDF} className="bg-blue-600 text-white px-4 py-2 rounded-md text-xs font-bold uppercase hover:bg-blue-700">Export</button>
+                            </div>
+                        </div>
+
+                        {/* Table */}
+                        <div className="bg-white border border-gray-300 rounded-lg overflow-hidden shadow-sm">
+                            <table className="w-full text-left">
+                                <thead className="bg-gray-100 border-b border-gray-300 text-[11px] font-bold uppercase text-gray-500">
+                                    <tr>
+                                        <th className="p-4">Information</th>
+                                        <th className="p-4">Amount</th>
+                                        <th className="p-4">Status</th>
+                                        <th className="p-4 text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-200">
+                                    {loading ? (
+                                        <tr><td colSpan="4" className="p-10 text-center text-blue-600 animate-pulse font-bold">Refreshing {activeTab}...</td></tr>
+                                    ) : (
+                                        data.map(item => (
+                                            <tr key={item._id} className="hover:bg-gray-50 transition-colors">
+                                                <td className="p-4">
+                                                    <p className="font-bold text-sm text-gray-800 leading-tight">{item.name || `Order #${item._id.substring(18)}`}</p>
+                                                    <p className="text-[10px] text-gray-500 mt-0.5">{item.email || item.category}</p>
+                                                </td>
+                                                <td className="p-4 text-sm font-semibold text-gray-700">₹{item.price || item.amount || 0}</td>
+                                                <td className="p-4">
+                                                    <span className={`px-2 py-1 rounded text-[10px] font-bold border ${
+                                                        item.status === 'Delivered' 
+                                                        ? 'bg-green-50 border-green-200 text-green-700' 
+                                                        : 'bg-blue-50 border-blue-100 text-blue-600'
+                                                    }`}>
+                                                        {item.status || item.category || 'Active'}
+                                                    </span>
+                                                </td>
+                                                <td className="p-4 text-right">
+                                                    {activeTab === 'products' && (
+                                                        <button onClick={() => handleDeleteProduct(item._id)} className="text-red-500 text-[11px] font-bold uppercase hover:bg-red-50 px-2 py-1 rounded">Delete</button>
+                                                    )}
+                                                    {activeTab === 'orders' && (
+                                                        <select 
+                                                            className="text-[11px] border border-gray-300 rounded p-1 bg-white font-medium outline-none"
+                                                            value={item.status}
+                                                            onChange={(e) => handleUpdateStatus(item._id, e.target.value)}
+                                                        >
+                                                            <option value="Order Placed">Placed</option>
+                                                            <option value="Processing">Processing</option>
+                                                            <option value="Shipped">Shipped</option>
+                                                            <option value="Delivered">Delivered</option>
+                                                        </select>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
 };
 
 export default AdminDashboard;

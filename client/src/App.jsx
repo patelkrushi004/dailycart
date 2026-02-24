@@ -19,6 +19,9 @@ import ProductList from './pages/seller/ProductList';
 import Orders from './pages/seller/Orders';
 import Loading from './components/Loading';
 
+// Admin Import
+import AdminDashboard from './pages/admin/AdminDashboard'; 
+
 // Delivery Imports
 import DeliveryDashboard from './pages/delivery/DeliveryDashboard'; 
 import DeliverySetup from './pages/delivery/DeliverySetup';
@@ -27,7 +30,7 @@ import DeliveryLogin from './components/delivery/DeliveryLogin';
 import DeliveredOrders from './pages/delivery/DeliveredOrders'; 
 import CancelledOrders from './pages/delivery/CancelledOrders';
 import AcceptedOrders from './pages/delivery/AcceptedOrders';
-import DeliveryHistory from './pages/delivery/DeliveryHistory'; // IMPORTED HERE
+import DeliveryHistory from './pages/delivery/DeliveryHistory';
 
 const App = () => {
   const location = useLocation();
@@ -46,16 +49,21 @@ const App = () => {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, [location]); 
 
+  // --- Logic to identify the current section ---
   const isSellerPath = location.pathname.includes("seller");
   const isDeliveryPath = location.pathname.includes("delivery"); 
+  const isAdminPath = location.pathname.includes("admin"); 
 
   return (
     <div className='text-default min-h-screen text-gray-700 bg-white'>
-      {isSellerPath || isDeliveryPath ? null : <Navbar />} 
+      {/* Navbar hides if user is on Seller, Delivery, or Admin pages */}
+      {isSellerPath || isDeliveryPath || isAdminPath ? null : <Navbar />} 
+      
       {showUserLogin ? <Login /> : null}
       <Toaster position="top-center" reverseOrder={false} />
 
-      <div className={`${isSellerPath || isDeliveryPath ? "" : "px-6 md:px-16 lg:px-24 xl:px-32"}`}>
+      {/* Remove side padding for Dashboard views */}
+      <div className={`${isSellerPath || isDeliveryPath || isAdminPath ? "" : "px-6 md:px-16 lg:px-24 xl:px-32"}`}>
         <Routes>
           {/* User Routes */}
           <Route path='/' element={<Home />} />
@@ -67,6 +75,9 @@ const App = () => {
           <Route path='/my-orders' element={<MyOrders />} />
           <Route path='/loader' element={<Loading />} />
 
+          {/* --- ADMIN ROUTE --- */}
+          <Route path='/admin' element={<AdminDashboard />} />
+
           {/* Seller Routes */}
           <Route path='/seller' element={isSeller ? <SellerLayout /> : <SellerLogin />}>
             <Route index element={isSeller ? <AddProduct /> : null} />
@@ -74,8 +85,7 @@ const App = () => {
             <Route path='orders' element={<Orders />} />
           </Route>
 
-          {/* --- DELIVERY ROUTES --- */}
-          
+          {/* Delivery Routes */}
           <Route 
             path='/delivery/login' 
             element={deliveryToken ? <Navigate to="/delivery/dashboard" /> : <DeliveryLogin />} 
@@ -93,7 +103,6 @@ const App = () => {
                 <Route path="accepted" element={<AcceptedOrders />} />
             </Route>
 
-            {/* Added History and ensured Delivered is present */}
             <Route path='delivered' element={<DeliveredOrders />} />
             <Route path='history' element={<DeliveryHistory />} /> 
             <Route path='cancelled' element={<CancelledOrders />} />
@@ -101,11 +110,11 @@ const App = () => {
           </Route>
 
           <Route path='/delivery/*' element={<Navigate to="/delivery/login" />} />
-
         </Routes>
       </div>
 
-      {!isSellerPath && !isDeliveryPath && <Footer />}
+      {/* Footer hides if user is on Seller, Delivery, or Admin pages */}
+      {!isSellerPath && !isDeliveryPath && !isAdminPath && <Footer />}
     </div>
   )
 }

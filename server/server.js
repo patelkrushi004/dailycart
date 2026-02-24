@@ -13,11 +13,13 @@ import orderRouter from './routes/orderRoute.js';
 import { stripeWebhooks } from './controllers/orderController.js';
 import deliveryRouter from './routes/deliveryRoute.js';
 
+// --- ADDED THIS LINE ---
+import adminRouter from './routes/adminRoute.js'; 
+
 const app = express();
 const port = process.env.PORT || 4000;
 
-// 1. Middlewares (Must be defined before routes)
-// Note: Stripe Webhook MUST stay above express.json()
+// 1. Middlewares
 app.post('/stripe', express.raw({ type: 'application/json' }), stripeWebhooks);
 
 app.use(express.json());
@@ -53,8 +55,10 @@ app.use('/api/address', addressRouter);
 app.use('/api/order', orderRouter);
 app.use('/api/delivery', deliveryRouter);
 
+// --- ADDED THIS LINE ---
+app.use('/api/admin', adminRouter); 
+
 // 3. Connect Services & Start Server
-// This wrapper ensures we don't start the server if the DB fails
 const startServer = async () => {
     try {
         await connectDB();
@@ -66,7 +70,7 @@ const startServer = async () => {
         });
     } catch (error) {
         console.error("Critical Connection Error ❌:", error.message);
-        process.exit(1); // Stop the process if we can't connect
+        process.exit(1); 
     }
 };
 

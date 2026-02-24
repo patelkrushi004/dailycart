@@ -7,23 +7,23 @@ const userSchema = new mongoose.Schema({
 
   role: {
     type: String,
-    enum: ['customer', 'seller', 'delivery'],
+    // ADDED 'admin' to the enum list here
+    enum: ['customer', 'seller', 'delivery', 'admin'], 
     default: 'customer'
   },
 
   // --- DELIVERY SPECIFIC FIELDS ---
-  // isFirstLogin controls the "Verify Profile" redirect logic
   isFirstLogin: { type: Boolean, default: true },
   phone: { type: String, default: "" },
   vehicleType: { 
     type: String, 
-    // Updated enum to match your Frontend <option> values exactly
     enum: ['Bike', 'Scooter', 'Cycle', 'Car', 'none', ''], 
     default: 'none' 
   },
   
   // --- CUSTOMER SPECIFIC FIELDS ---
   cartItems: { type: Object, default: {} },
+
 }, { minimize: false, timestamps: true });
 
 // Check if model exists before creating to prevent compilation errors
