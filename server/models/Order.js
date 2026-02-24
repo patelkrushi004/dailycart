@@ -14,7 +14,10 @@ const orderSchema = new mongoose.Schema({
     default: 'Order Placed',
     enum: ['Order Placed', 'Preparing', 'Ready for Pickup', 'Out for Delivery', 'Delivered', 'Cancelled']
   },
-  deliveryBoy: { type: mongoose.Schema.Types.ObjectId, ref: 'user', default: null },
+  // CHANGED: Use String to ensure compatibility with frontend ID strings
+  // This ensures your .find({ deliveryBoy: id }) query in History works perfectly.
+  deliveryBoy: { type: String, default: null }, 
+  
   deliveryStatus: { type: String, default: 'pending' },
   deliveredAt: { type: Date },
   paymentType: { type: String, required: true }, 

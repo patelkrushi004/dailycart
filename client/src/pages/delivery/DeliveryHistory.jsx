@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
-import { assets } from '../../assets/assets';
+import { assets } from '../../assets/assets'; 
 
 const DeliveryHistory = () => {
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
-    const currency = "₹";
+    const currency = "₹"; 
 
     const fetchHistory = async () => {
         try {
@@ -16,13 +16,14 @@ const DeliveryHistory = () => {
 
             if (!user?._id) return;
 
-            // Notice the URL matches the route: /api/delivery/list/:deliveryBoyId
+            // Fetching from the delivery history endpoint
             const { data } = await axios.get(`http://localhost:4000/api/delivery/list/${user._id}`, {
                 headers: { token }
             });
 
             if (data.success) {
-                setOrders(data.orders);
+                // Reverse to show the most recent delivery at the top
+                setOrders(data.orders.reverse());
             }
         } catch (error) {
             console.error("History fetch error", error);
@@ -36,61 +37,86 @@ const DeliveryHistory = () => {
         fetchHistory();
     }, []);
 
-    if (loading) return <div className='p-10'>Loading History...</div>;
+    if (loading) return <div className='p-10 text-center font-medium'>Loading History...</div>;
 
     return (
-        <div className='no-scrollbar flex-1 h-[95vh] overflow-y-scroll bg-gray-50'>
+        <div className='no-scrollbar flex-1 h-[95vh] overflow-y-scroll bg-white'>
             <div className="md:p-10 p-4 space-y-4">
-                <div className='flex flex-col items-start mb-6'>
+                <div className='flex flex-col items-start mb-4'>
                     <h2 className="text-lg font-medium uppercase tracking-wider">Completed Deliveries</h2>
                     <div className='w-16 h-0.5 bg-green-500 rounded-full'></div>
                 </div>
 
                 {orders.length > 0 ? (
                     orders.map((order, index) => (
-                        <div key={index} className="flex flex-col md:flex-row gap-5 justify-between p-5 rounded-md border border-gray-200 bg-white shadow-sm">
-                            
-                            {/* Product Info */}
-                            <div className="flex flex-col gap-2">
-                                <div className='flex items-center gap-3'>
-                                    <img className="w-10" src={assets.box_icon} alt="" />
-                                    <div>
-                                        {order.items.map((item, idx) => (
-                                            <p key={idx} className='text-sm font-medium'>
-                                                {item.product?.name} x {item.quantity}
+                        <div key={index} className="flex flex-col md:items-center md:flex-row gap-5 justify-between p-5 max-w-4xl rounded-md border border-gray-300 bg-white shadow-sm">
+
+                            {/* Section 1: Product Images & Names (Mirroring Seller) */}
+                            <div className="flex flex-col gap-3 min-w-[280px]">
+                                {order.items.map((item, idx) => (
+                                    <div key={idx} className="flex items-center gap-4">
+                                        <div className='bg-gray-100 p-1 rounded-md'>
+                                            <img 
+                                                className="w-12 h-12 object-cover rounded" 
+                                                src={item.product?.image?.[0] || assets.box_icon} 
+                                                alt="product" 
+                                            />
+                                        </div>
+                                        <div>
+                                            <p className="font-medium text-sm leading-tight">
+                                                {item.product ? item.product.name : "Deleted Product"}
                                             </p>
-                                        ))}
+                                            <p className='text-xs text-primary font-bold'>
+                                                x {item.quantity}
+                                            </p>
+                                        </div>
                                     </div>
-                                </div>
-                                <p className='text-[10px] text-gray-400 font-mono'>Order ID: {order._id}</p>
+                                ))}
+                                <p className='text-[10px] text-gray-400 font-mono mt-1'>Order ID: {order._id}</p>
                             </div>
 
-                            {/* Customer Info */}
-                            <div className='text-sm text-gray-600'>
-                                <p className='font-semibold text-black'>{order.address.firstName} {order.address.lastName}</p>
-                                <p className='text-xs'>{order.address.city}, {order.address.state}</p>
-                            </div>
-
-                            {/* Payment Status (Matches Seller Style) */}
-                            <div className='flex flex-col items-center md:items-end gap-2'>
-                                <p className='font-bold text-gray-800'>{currency}{order.amount}</p>
-                                <div className='flex gap-2'>
-                                    <span className='bg-green-100 text-green-700 text-[10px] px-2 py-1 rounded font-bold uppercase'>
-                                        Paid
-                                    </span>
-                                    <span className='bg-blue-100 text-blue-700 text-[10px] px-2 py-1 rounded font-bold uppercase'>
-                                        Delivered
-                                    </span>
-                                </div>
-                                <p className='text-[10px] text-gray-400'>
-                                    {new Date(order.deliveredAt).toLocaleDateString()}
+                            {/* Section 2: Customer Address */}
+                            <div className="text-sm text-black/60 border-l border-gray-100 pl-4">
+                                <p className='text-black/80 font-semibold'>
+                                    {order.address.firstName} {order.address.lastName}
                                 </p>
+                                <p className='text-xs'>{order.address.street}, {order.address.city}</p>
+                                <p className='text-xs'>{order.address.state}, {order.address.zipcode}</p>
+                                <p className='text-xs text-primary font-medium'>{order.address.phone}</p>
+                            </div>
+
+                            {/* Section 3: Total Amount */}
+                            <div className='text-center'>
+                                <p className="font-bold text-lg text-gray-800">
+                                    {currency}{order.amount}
+                                </p>
+                                <p className='text-[10px] text-gray-400 uppercase font-bold'>{order.paymentType}</p>
+                            </div>
+
+                            {/* Section 4: Delivery Status & Date */}
+                            <div className="flex flex-col items-start md:items-end text-sm min-w-[140px]">
+                                <div className='flex items-center gap-2 mb-1'>
+                                    <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                                    <p className="text-green-600 font-bold uppercase text-xs">
+                                        DELIVERED
+                                    </p>
+                                </div>
+                                
+                                <p className='text-xs text-gray-500'>
+                                    {order.deliveredAt ? new Date(order.deliveredAt).toLocaleDateString() : "Date N/A"}
+                                </p>
+                                
+                                <div className='mt-2 py-1 px-3 bg-green-50 rounded border border-green-100'>
+                                    <p className='text-[11px] font-bold text-green-700'>
+                                        Payment: {order.isPaid ? "RECEIVED" : "PENDING"}
+                                    </p>
+                                </div>
                             </div>
                         </div>
                     ))
                 ) : (
-                    <div className='text-center py-20 bg-white rounded-md border border-dashed border-gray-300'>
-                        <p className='text-gray-400'>No completed deliveries yet.</p>
+                    <div className="text-gray-500 text-center py-20 border-2 border-dashed rounded-md max-w-4xl bg-gray-50">
+                        <p>No completed deliveries found.</p>
                     </div>
                 )}
             </div>
