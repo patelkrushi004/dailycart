@@ -10,7 +10,7 @@ const DeliveryLayout = () => {
         return <Navigate to="/delivery/login" replace />;
     }
 
-    // CLEANED UP LINKS: This matches your App.jsx routes exactly
+    // UPDATED LINKS: Added the 'History' tab specifically
     const sidebarLinks = [
         { 
             name: "Available Orders", 
@@ -18,9 +18,14 @@ const DeliveryLayout = () => {
             icon: assets.order_icon 
         },
         { 
-            name: "Delivered & History", 
-            path: "/delivery/delivered", // Points to your new unified page
+            name: "Current Task", 
+            path: "/delivery/delivered", // The page with the "Confirm" button
             icon: assets.tick_icon 
+        },
+        { 
+            name: "Delivery History", 
+            path: "/delivery/history", // The new page where orders stay forever
+            icon: assets.order_icon // You can change this to a clock/history icon if available
         },
         { 
             name: "Profile Setup", 
@@ -44,7 +49,7 @@ const DeliveryLayout = () => {
                     <img src={assets.logo} alt="logo" className="w-34 md:w-38" />
                 </Link>
                 <div className="flex items-center gap-5 text-gray-500">
-                    <p className="font-medium md:block hidden">Delivery Partner Panel</p>
+                    <p className="font-medium md:block hidden text-primary">Delivery Partner Panel</p>
                     <button onClick={logout} className='border border-gray-300 rounded-full text-sm px-4 py-1 hover:bg-red-50 hover:text-red-600 transition-all'>
                         Logout
                     </button>
@@ -58,7 +63,6 @@ const DeliveryLayout = () => {
                         <NavLink 
                             to={item.path} 
                             key={item.name} 
-                            // Ensures 'Available' isn't highlighted when on 'Delivered'
                             end={item.path === "/delivery/dashboard"} 
                             className={({ isActive }) => `flex items-center py-4 px-4 gap-3 transition-all ${
                                 isActive ? "border-r-4 bg-blue-50 border-blue-600 text-blue-700" : "text-gray-600 hover:bg-gray-50"
