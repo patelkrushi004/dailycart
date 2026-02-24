@@ -13,12 +13,14 @@ const DeliveryLayout = () => {
     const sidebarLinks = [
         { 
             name: "Current Orders", 
-            path: "/delivery/delivered", // Updated to match your URL requirement
-            icon: assets.tick_icon 
+            path: "/delivery/delivered", 
+            // Changed to order_icon to get that standing rectangle/document look
+            icon: assets.order_icon 
         },
         { 
             name: "Delivery History", 
             path: "/delivery/history", 
+            // Keeps the same standing rectangle design
             icon: assets.order_icon 
         },
         { 
@@ -57,10 +59,13 @@ const DeliveryLayout = () => {
                         <NavLink 
                             to={item.path} 
                             key={item.name} 
-                            className={({ isActive }) => `flex items-center py-4 px-4 gap-3 transition-all ${
-                                isActive ? "border-r-4 bg-blue-50 border-blue-600 text-blue-700" : "text-gray-600 hover:bg-gray-50"
+                            className={({ isActive }) => `flex items-center py-4 px-4 gap-3 transition-all border-r-4 ${
+                                isActive 
+                                ? "bg-blue-50 border-blue-600 text-blue-700" 
+                                : "text-gray-600 border-transparent hover:bg-gray-50"
                             }`}
                         >
+                            {/* Icon updated to look consistent across links */}
                             <img src={item.icon} alt="" className="w-6 h-6 opacity-80" />
                             <p className="md:block hidden font-semibold text-sm">{item.name}</p>
                         </NavLink>
