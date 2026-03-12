@@ -24,8 +24,12 @@ const AdminDashboard = () => {
     const fetchStats = async () => {
         try {
             const res = await axios.get("http://localhost:4000/api/admin/stats");
-            if (res.data.success) setStats(res.data.stats);
-        } catch (err) { console.error(err); }
+            if (res.data.success) {
+                setStats(res.data.stats);
+            }
+        } catch (err) { 
+            console.error("Stats fetch error:", err); 
+        }
     };
 
     const fetchData = async () => {
@@ -54,6 +58,7 @@ const AdminDashboard = () => {
             if (res.data.success) {
                 toast.success("Status Updated");
                 fetchData();
+                fetchStats(); 
             }
         } catch (err) { toast.error("Update failed"); }
     };
@@ -78,7 +83,6 @@ const AdminDashboard = () => {
         doc.setFontSize(10);
         doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 20);
 
-        // MAP DATA TO: ID, Price (Dollar), Status, Date for PDF ONLY
         const rows = data.map(item => [
             item._id.substring(18).toUpperCase(), 
             `$${item.price || item.amount || 0}`, 
@@ -100,7 +104,6 @@ const AdminDashboard = () => {
 
     return (
         <div className="min-h-screen flex flex-col bg-white font-sans">
-            {/* Navbar */}
             <div className="flex items-center justify-between px-4 md:px-8 border-b border-gray-300 py-3 bg-white sticky top-0 z-20">
                 <Link to='/'><img src={assets.logo} alt="logo" className="w-34 md:w-38" /></Link>
                 <div className="flex items-center gap-5">
@@ -110,7 +113,6 @@ const AdminDashboard = () => {
             </div>
 
             <div className="flex flex-1">
-                {/* Sidebar */}
                 <div className="md:w-64 w-20 border-r h-[calc(100vh-65px)] border-gray-300 pt-4 flex flex-col sticky top-[65px] bg-white z-10">
                     {menuItems.map((item) => (
                         <button key={item.id} onClick={() => setActiveTab(item.id)} className={`flex items-center py-4 px-4 gap-3 transition-all border-r-4 ${activeTab === item.id ? "bg-blue-50 border-blue-600 text-blue-700" : "text-gray-600 border-transparent hover:bg-gray-50"}`}>
@@ -120,26 +122,27 @@ const AdminDashboard = () => {
                     ))}
                 </div>
 
-                {/* Content */}
                 <div className="flex-1 bg-gray-50 p-4 md:p-8 overflow-y-auto">
                     <div className="max-w-6xl mx-auto">
-                        {/* Stats Summary */}
+                        {/* Stats Summary Cards */}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
                             <div className="bg-white p-5 border border-gray-300 rounded-lg shadow-sm">
                                 <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Total Revenue</p>
-                                <h3 className="text-2xl font-bold text-gray-800">${stats.totalSales.toLocaleString()}</h3>
+                                <h3 className="text-2xl font-bold text-gray-800">
+                                    ${Number(stats.totalSales || 0).toLocaleString()}
+                                </h3>
                             </div>
                             <div className="bg-white p-5 border border-gray-300 rounded-lg shadow-sm">
                                 <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Inventory</p>
-                                <h3 className="text-2xl font-bold text-gray-800">{stats.totalProducts} Items</h3>
+                                <h3 className="text-2xl font-bold text-gray-800">{stats.totalProducts || 0} Items</h3>
                             </div>
                             <div className="bg-white p-5 border border-gray-300 rounded-lg shadow-sm">
                                 <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Total Orders</p>
-                                <h3 className="text-2xl font-bold text-gray-800">{stats.totalOrders}</h3>
+                                <h3 className="text-2xl font-bold text-gray-800">{stats.totalOrders || 0}</h3>
                             </div>
                         </div>
 
-                        {/* Search & Export */}
+                        {/* Search and Filter Bar */}
                         <div className="bg-white p-4 border border-gray-300 rounded-lg mb-6 flex flex-wrap justify-between items-center gap-4 shadow-sm">
                             <div className="flex items-center gap-2 text-xs">
                                 <input type="date" className="border border-gray-300 p-1.5 rounded-md outline-none" onChange={(e)=>setDateRange({...dateRange, start: e.target.value})}/>
@@ -152,16 +155,16 @@ const AdminDashboard = () => {
                             </div>
                         </div>
 
-                        {/* Main Table */}
+                        {/* Main Data Table */}
                         <div className="bg-white border border-gray-300 rounded-lg overflow-hidden shadow-sm">
                             <table className="w-full text-left">
                                 <thead className="bg-gray-100 border-b border-gray-300 text-[11px] font-bold uppercase text-gray-500">
                                     <tr>
-                                        <th className="p-4">Information</th>
-                                        <th className="p-4">Price</th>
-                                        <th className="p-4">Status</th>
+                                        <th className="p-4">{activeTab === 'users' ? 'Users' : 'Information'}</th>
+                                        {activeTab !== 'users' && <th className="p-4">Price</th>}
+                                        {activeTab !== 'users' && activeTab !== 'products' && activeTab !== 'payments' && <th className="p-4">Status</th>}
                                         <th className="p-4">Date</th>
-                                        <th className="p-4 text-right">Actions</th>
+                                        {activeTab !== 'users' && activeTab !== 'payments' && <th className="p-4 text-right">Actions</th>}
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-200">
@@ -172,39 +175,40 @@ const AdminDashboard = () => {
                                             <tr key={item._id} className="hover:bg-gray-50 transition-colors">
                                                 <td className="p-4">
                                                     <p className="font-bold text-sm text-gray-800">
-                                                        {item.userId?.name || item.name || (activeTab === 'payments' ? `ID: ${item._id.substring(18)}` : "Guest")}
+                                                        {/* Fixed: Displays ID if name is missing for orders */}
+                                                        {item.userId?.name || item.name || `ID: ${item._id.substring(18).toUpperCase()}`}
                                                     </p>
                                                     <p className="text-[10px] text-gray-500 italic">
                                                         {item.userId?.email || item.email || item.category || "System Record"}
                                                     </p>
                                                 </td>
-                                                <td className="p-4 text-sm font-semibold text-gray-700">${item.price || item.amount || 0}</td>
-                                                <td className="p-4">
-                                                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${item.paymentStatus === 'Received' || item.status === 'Delivered' ? 'bg-green-50 border-green-200 text-green-700' : 'bg-blue-50 border-blue-100 text-blue-700'}`}>
-                                                        {item.paymentStatus || item.status || "Pending"}
-                                                    </span>
-                                                </td>
+                                                {activeTab !== 'users' && (
+                                                    <td className="p-4 text-sm font-semibold text-gray-700">${item.price || item.amount || 0}</td>
+                                                )}
+                                                {activeTab !== 'users' && activeTab !== 'products' && activeTab !== 'payments' && (
+                                                    <td className="p-4">
+                                                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${item.paymentStatus === 'Received' || item.status === 'Delivered' ? 'bg-green-50 border-green-200 text-green-700' : 'bg-blue-50 border-blue-100 text-blue-700'}`}>
+                                                            {item.paymentStatus || item.status || "Pending"}
+                                                        </span>
+                                                    </td>
+                                                )}
                                                 <td className="p-4 text-xs text-gray-500">
                                                     {item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 'N/A'}
                                                 </td>
-                                                <td className="p-4 text-right">
-                                                    {activeTab === 'payments' && (
-                                                        <select className="text-[10px] border border-gray-300 rounded p-1" value={item.paymentStatus || "Pending"} onChange={(e)=>handleUpdateStatus(item._id, e.target.value)}>
-                                                            <option value="Pending">Pending</option>
-                                                            <option value="Received">Received</option>
-                                                        </select>
-                                                    )}
-                                                    {activeTab === 'orders' && (
-                                                        <select className="text-[10px] border border-gray-300 rounded p-1" value={item.status} onChange={(e)=>handleUpdateStatus(item._id, e.target.value)}>
-                                                            <option value="Order Placed">Placed</option>
-                                                            <option value="Shipped">Shipped</option>
-                                                            <option value="Delivered">Delivered</option>
-                                                        </select>
-                                                    )}
-                                                    {activeTab === 'products' && (
-                                                        <button onClick={()=>handleDeleteProduct(item._id)} className="text-red-500 text-[10px] font-bold uppercase hover:underline">Delete</button>
-                                                    )}
-                                                </td>
+                                                {activeTab !== 'users' && activeTab !== 'payments' && (
+                                                    <td className="p-4 text-right">
+                                                        {activeTab === 'orders' && (
+                                                            <select className="text-[10px] border border-gray-300 rounded p-1" value={item.status} onChange={(e)=>handleUpdateStatus(item._id, e.target.value)}>
+                                                                <option value="Order Placed">Placed</option>
+                                                                <option value="Shipped">Shipped</option>
+                                                                <option value="Delivered">Delivered</option>
+                                                            </select>
+                                                        )}
+                                                        {activeTab === 'products' && (
+                                                            <button onClick={()=>handleDeleteProduct(item._id)} className="text-red-500 text-[10px] font-bold uppercase hover:underline">Delete</button>
+                                                        )}
+                                                    </td>
+                                                )}
                                             </tr>
                                         ))
                                     )}
