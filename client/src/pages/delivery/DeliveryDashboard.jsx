@@ -35,19 +35,24 @@ const DeliveryDashboard = () => {
     
     const { user } = getAuth();
 
+    // Logic to prevent "Hi, undefined"
+    const welcomeMessage = user?.name 
+        ? `Hi, ${user.name.split(' ')[0]}!` 
+        : "Welcome, Partner!";
+
     return (
         <div className="bg-gray-50 min-h-[90vh] flex items-center justify-center p-6">
             <div className="max-w-md w-full">
                 
-                <div className="bg-white rounded-[2.5rem] p-10 shadow-2xl shadow-gray-200/60 border border-gray-100 text-center">
+                <div className="bg-white rounded-[2.5rem] p-10 shadow-xl border border-gray-100 text-center">
                     
                     {/* Icon Section */}
                     <div className="w-24 h-24 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-8 shadow-inner">
                         <span className="text-4xl">🚀</span>
                     </div>
 
-                    <h1 className="text-3xl font-black text-gray-900 tracking-tight">
-                        {needsSetup ? "Almost There!" : `Hi, ${user?.name.split(' ')[0]}!`}
+                    <h1 className="text-3xl font-extrabold text-gray-800 tracking-tight">
+                        {needsSetup ? "Almost There!" : welcomeMessage}
                     </h1>
                     
                     <p className="text-gray-500 mt-3 font-medium px-4">
@@ -56,13 +61,12 @@ const DeliveryDashboard = () => {
                             : "Your dashboard is active. You can now manage your deliveries."}
                     </p>
 
-                    {/* --- DYNAMIC BUTTON SECTION --- */}
-                    <div className="mt-10 space-y-4">
+                    {/* --- BUTTON SECTION --- */}
+                    <div className="mt-10">
                         {needsSetup ? (
-                            /* THE REDIRECT BUTTON */
                             <button 
                                 onClick={() => navigate('/delivery/setup')}
-                                className="w-full bg-green-600 text-white py-4 rounded-2xl font-bold text-lg hover:bg-green-700 hover:scale-[1.02] transition-all duration-300 shadow-xl shadow-green-200 active:scale-95 cursor-pointer flex items-center justify-center gap-2"
+                                className="w-full bg-green-600 text-white font-bold p-4 rounded-lg hover:bg-green-700 transition duration-300 shadow-md cursor-pointer flex items-center justify-center gap-2"
                             >
                                 Finish Account Setup
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -70,21 +74,12 @@ const DeliveryDashboard = () => {
                                 </svg>
                             </button>
                         ) : (
-                            /* STANDARD DASHBOARD BUTTONS */
-                            <>
-                                <button 
-                                    onClick={() => navigate('/delivery/history')}
-                                    className="w-full bg-gray-900 text-white py-4 rounded-2xl font-bold text-lg hover:bg-black hover:scale-[1.02] transition-all duration-300 shadow-xl active:scale-95 cursor-pointer"
-                                >
-                                    View History
-                                </button>
-                                <button 
-                                    onClick={() => navigate('/delivery/delivered')}
-                                    className="w-full bg-white text-gray-900 py-4 rounded-2xl font-bold text-lg border-2 border-gray-900 hover:bg-gray-50 transition-all active:scale-95 cursor-pointer"
-                                >
-                                    Active Orders
-                                </button>
-                            </>
+                            <button 
+                                onClick={() => navigate('/delivery/delivered')}
+                                className="w-full bg-green-600 text-white font-bold p-4 rounded-lg hover:bg-green-700 transition duration-300 shadow-md cursor-pointer"
+                            >
+                                View My Orders
+                            </button>
                         )}
                     </div>
 

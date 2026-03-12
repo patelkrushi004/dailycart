@@ -14,13 +14,6 @@ const DeliveryLayout = () => {
         { 
             name: "Current Orders", 
             path: "/delivery/delivered", 
-            // Changed to order_icon to get that standing rectangle/document look
-            icon: assets.order_icon 
-        },
-        { 
-            name: "Delivery History", 
-            path: "/delivery/history", 
-            // Keeps the same standing rectangle design
             icon: assets.order_icon 
         },
         { 
@@ -65,7 +58,6 @@ const DeliveryLayout = () => {
                                 : "text-gray-600 border-transparent hover:bg-gray-50"
                             }`}
                         >
-                            {/* Icon updated to look consistent across links */}
                             <img src={item.icon} alt="" className="w-6 h-6 opacity-80" />
                             <p className="md:block hidden font-semibold text-sm">{item.name}</p>
                         </NavLink>
