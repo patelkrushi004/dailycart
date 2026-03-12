@@ -76,6 +76,7 @@ const AdminDashboard = () => {
         }
     };
 
+    // --- UPDATED DYNAMIC PDF EXPORT (Customer Column Removed for Orders/Payments) ---
     const downloadPDF = () => {
         const doc = new jsPDF('p', 'mm', 'a4');
         doc.setFontSize(18);
@@ -83,15 +84,39 @@ const AdminDashboard = () => {
         doc.setFontSize(10);
         doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 20);
 
-        const rows = data.map(item => [
-            item._id.substring(18).toUpperCase(), 
-            `$${item.price || item.amount || 0}`, 
-            item.paymentStatus || item.status || 'N/A',
-            item.createdAt ? item.createdAt.split('T')[0] : 'N/A'
-        ]);
+        let head = [];
+        let rows = [];
+
+        if (activeTab === 'users') {
+            head = [['ID', 'Name', 'Email', 'Joined Date']];
+            rows = data.map(item => [
+                item._id.substring(18).toUpperCase(),
+                item.name || 'N/A',
+                item.email || 'N/A',
+                item.createdAt ? item.createdAt.split('T')[0] : 'N/A'
+            ]);
+        } else if (activeTab === 'products') {
+            head = [['ID', 'Product Name', 'Category', 'Price', 'Date']];
+            rows = data.map(item => [
+                item._id.substring(18).toUpperCase(),
+                item.name || 'N/A',
+                item.category || 'N/A',
+                `$${item.price || 0}`,
+                item.createdAt ? item.createdAt.split('T')[0] : 'N/A'
+            ]);
+        } else {
+            // For Orders and Payments - CUSTOMER COLUMN REMOVED
+            head = [['ID', 'Price/Amount', 'Status', 'Date']];
+            rows = data.map(item => [
+                item._id.substring(18).toUpperCase(),
+                `$${item.amount || item.price || 0}`,
+                item.paymentStatus || item.status || 'Pending',
+                item.createdAt ? item.createdAt.split('T')[0] : 'N/A'
+            ]);
+        }
 
         autoTable(doc, { 
-            head: [['ID', 'Price', 'Status', 'Date']], 
+            head: head, 
             body: rows, 
             startY: 28,
             theme: 'grid',
@@ -113,6 +138,7 @@ const AdminDashboard = () => {
             </div>
 
             <div className="flex flex-1">
+                {/* Sidebar */}
                 <div className="md:w-64 w-20 border-r h-[calc(100vh-65px)] border-gray-300 pt-4 flex flex-col sticky top-[65px] bg-white z-10">
                     {menuItems.map((item) => (
                         <button key={item.id} onClick={() => setActiveTab(item.id)} className={`flex items-center py-4 px-4 gap-3 transition-all border-r-4 ${activeTab === item.id ? "bg-blue-50 border-blue-600 text-blue-700" : "text-gray-600 border-transparent hover:bg-gray-50"}`}>
@@ -122,9 +148,10 @@ const AdminDashboard = () => {
                     ))}
                 </div>
 
+                {/* Main Content */}
                 <div className="flex-1 bg-gray-50 p-4 md:p-8 overflow-y-auto">
                     <div className="max-w-6xl mx-auto">
-                        {/* Stats Summary Cards */}
+                        {/* Stats */}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
                             <div className="bg-white p-5 border border-gray-300 rounded-lg shadow-sm">
                                 <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Total Revenue</p>
@@ -142,7 +169,7 @@ const AdminDashboard = () => {
                             </div>
                         </div>
 
-                        {/* Search and Filter Bar */}
+                        {/* Search/Export Bar */}
                         <div className="bg-white p-4 border border-gray-300 rounded-lg mb-6 flex flex-wrap justify-between items-center gap-4 shadow-sm">
                             <div className="flex items-center gap-2 text-xs">
                                 <input type="date" className="border border-gray-300 p-1.5 rounded-md outline-none" onChange={(e)=>setDateRange({...dateRange, start: e.target.value})}/>
@@ -155,7 +182,7 @@ const AdminDashboard = () => {
                             </div>
                         </div>
 
-                        {/* Main Data Table */}
+                        {/* Table */}
                         <div className="bg-white border border-gray-300 rounded-lg overflow-hidden shadow-sm">
                             <table className="w-full text-left">
                                 <thead className="bg-gray-100 border-b border-gray-300 text-[11px] font-bold uppercase text-gray-500">
@@ -175,7 +202,6 @@ const AdminDashboard = () => {
                                             <tr key={item._id} className="hover:bg-gray-50 transition-colors">
                                                 <td className="p-4">
                                                     <p className="font-bold text-sm text-gray-800">
-                                                        {/* Fixed: Displays ID if name is missing for orders */}
                                                         {item.userId?.name || item.name || `ID: ${item._id.substring(18).toUpperCase()}`}
                                                     </p>
                                                     <p className="text-[10px] text-gray-500 italic">

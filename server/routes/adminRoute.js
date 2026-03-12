@@ -5,17 +5,32 @@ import productModel from "../models/Product.js";
 
 const adminRouter = express.Router();
 
-// --- 1. DASHBOARD STATS ---
+// --- 1. DASHBOARD STATS (ROBUST REVENUE FIX) ---
 adminRouter.get("/stats", async (req, res) => {
     try {
         const totalUsers = await User.countDocuments();
         const totalProducts = await productModel.countDocuments();
         const orders = await orderModel.find({});
         
-        // Revenue counts only orders where payment is successful
-        const totalSales = orders
-            .filter(order => order.payment === true)
-            .reduce((acc, order) => acc + (order.amount || 0), 0);
+        /** * THE FIX: 
+         * 1. We check both 'amount' and 'price' fields.
+         * 2. We accept 'payment' as true, "true", or status "Received".
+         * 3. We use Number() to prevent string concatenation.
+         */
+        const totalSales = orders.reduce((acc, order) => {
+            const isPaid = 
+                order.payment === true || 
+                order.payment === "true" || 
+                order.paymentStatus === "Received" ||
+                order.status === "Delivered"; // Delivered usually implies paid
+
+            if (isPaid) {
+                // Use || to pick whichever field exists in your schema
+                const orderValue = order.amount || order.price || 0;
+                return acc + Number(orderValue);
+            }
+            return acc;
+        }, 0);
         
         res.json({ 
             success: true, 
@@ -31,8 +46,7 @@ adminRouter.get("/stats", async (req, res) => {
     }
 });
 
-// --- 2. UPDATE ORDER STATUS (WITH AUTO-PAYMENT) ---
-// If status is set to "Delivered", payment is automatically marked true
+// --- 2. UPDATE ORDER STATUS ---
 adminRouter.post("/update-status", async (req, res) => {
     try {
         const { orderId, status } = req.body;
@@ -40,6 +54,7 @@ adminRouter.post("/update-status", async (req, res) => {
 
         if (status === "Delivered") {
             updateData.payment = true;
+            updateData.paymentStatus = "Received";
         }
 
         const updatedOrder = await orderModel.findByIdAndUpdate(orderId, updateData, { new: true });
@@ -54,15 +69,17 @@ adminRouter.post("/update-status", async (req, res) => {
     }
 });
 
-// --- 3. MANUAL PAYMENT TOGGLE (FOR PAYMENTS SECTION) ---
-// Allows marking as "Received" (true) or "Pending" (false)
+// --- 3. MANUAL PAYMENT TOGGLE ---
 adminRouter.post("/update-payment", async (req, res) => {
     try {
         const { orderId, payment } = req.body; 
 
         const updatedOrder = await orderModel.findByIdAndUpdate(
             orderId, 
-            { payment: payment }, 
+            { 
+                payment: payment,
+                paymentStatus: payment ? "Received" : "Pending" 
+            }, 
             { new: true }
         );
 
@@ -70,23 +87,19 @@ adminRouter.post("/update-payment", async (req, res) => {
             return res.status(404).json({ success: false, message: "Order not found" });
         }
 
-        res.json({ 
-            success: true, 
-            message: payment ? "Payment marked as Received" : "Payment set to Pending" 
-        });
+        res.json({ success: true, message: payment ? "Payment Received" : "Payment Pending" });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
 });
 
-// --- 4. REPORT ENGINE (FETCH DATA BY TAB) ---
+// --- 4. REPORT ENGINE ---
 adminRouter.get("/reports/:category", async (req, res) => {
     try {
         const { category } = req.params;
         const { search, startDate, endDate } = req.query;
         let query = {};
 
-        // Filter by Date Range
         if (startDate && endDate) {
             query.createdAt = { 
                 $gte: new Date(startDate), 
@@ -94,7 +107,6 @@ adminRouter.get("/reports/:category", async (req, res) => {
             };
         }
 
-        // Filter by Search Term
         if (search) {
             query.$or = [
                 { name: { $regex: search, $options: 'i' } },
@@ -111,7 +123,7 @@ adminRouter.get("/reports/:category", async (req, res) => {
                 data = await productModel.find(query).sort({ createdAt: -1 }); 
                 break;
             case 'orders': 
-            case 'payments': // Both tabs show orders but with different action buttons in UI
+            case 'payments': 
                 data = await orderModel.find(query).sort({ createdAt: -1 }); 
                 break;
             default: 
