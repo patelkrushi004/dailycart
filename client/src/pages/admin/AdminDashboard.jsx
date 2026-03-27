@@ -76,7 +76,7 @@ const AdminDashboard = () => {
         }
     };
 
-    // --- UPDATED DYNAMIC PDF EXPORT (Customer Column Removed for Orders/Payments) ---
+    // --- UPDATED DYNAMIC PDF EXPORT (Using INR for Compatibility) ---
     const downloadPDF = () => {
         const doc = new jsPDF('p', 'mm', 'a4');
         doc.setFontSize(18);
@@ -96,20 +96,19 @@ const AdminDashboard = () => {
                 item.createdAt ? item.createdAt.split('T')[0] : 'N/A'
             ]);
         } else if (activeTab === 'products') {
-            head = [['ID', 'Product Name', 'Category', 'Price', 'Date']];
+            head = [['ID', 'Product Name', 'Category', 'Price (INR)', 'Date']];
             rows = data.map(item => [
                 item._id.substring(18).toUpperCase(),
                 item.name || 'N/A',
                 item.category || 'N/A',
-                `$${item.price || 0}`,
+                `INR ${item.price || 0}`,
                 item.createdAt ? item.createdAt.split('T')[0] : 'N/A'
             ]);
         } else {
-            // For Orders and Payments - CUSTOMER COLUMN REMOVED
-            head = [['ID', 'Price/Amount', 'Status', 'Date']];
+            head = [['ID', 'Amount (INR)', 'Status', 'Date']];
             rows = data.map(item => [
                 item._id.substring(18).toUpperCase(),
-                `$${item.amount || item.price || 0}`,
+                `INR ${item.amount || item.price || 0}`,
                 item.paymentStatus || item.status || 'Pending',
                 item.createdAt ? item.createdAt.split('T')[0] : 'N/A'
             ]);
@@ -121,7 +120,7 @@ const AdminDashboard = () => {
             startY: 28,
             theme: 'grid',
             headStyles: { fillColor: [37, 99, 235] },
-            styles: { fontSize: 9 }
+            styles: { fontSize: 9, font: "helvetica" } // Standard font
         });
 
         doc.save(`Dailycart_${activeTab}_Report.pdf`);
@@ -156,7 +155,7 @@ const AdminDashboard = () => {
                             <div className="bg-white p-5 border border-gray-300 rounded-lg shadow-sm">
                                 <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Total Revenue</p>
                                 <h3 className="text-2xl font-bold text-gray-800">
-                                    ${Number(stats.totalSales || 0).toLocaleString()}
+                                    ₹{Number(stats.totalSales || 0).toLocaleString()}
                                 </h3>
                             </div>
                             <div className="bg-white p-5 border border-gray-300 rounded-lg shadow-sm">
@@ -209,7 +208,7 @@ const AdminDashboard = () => {
                                                     </p>
                                                 </td>
                                                 {activeTab !== 'users' && (
-                                                    <td className="p-4 text-sm font-semibold text-gray-700">${item.price || item.amount || 0}</td>
+                                                    <td className="p-4 text-sm font-semibold text-gray-700">₹{item.price || item.amount || 0}</td>
                                                 )}
                                                 {activeTab !== 'users' && activeTab !== 'products' && activeTab !== 'payments' && (
                                                     <td className="p-4">
